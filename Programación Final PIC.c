@@ -74,6 +74,8 @@
 #define LED2 0x0020                     // Led 2 - RB5 - Pin 14
 #define LED3 0x0080                     // Led 3 - RB7 - Pin 16
 
+//Declaración de funciones
+
 void EnviarCaracter(char c);
 void EnviarCadena(char c[], int a);
 void IntTimer1(void);
@@ -89,6 +91,8 @@ void EnviarTiempos(void);
 void Radar(void);
 void InicializarESP(void);
 void EnviarDatos(char p);
+
+//Declaración de variables
 
 char charIn;
 int j = 0;
@@ -135,9 +139,9 @@ int g = 0;
 
 int Rutina = 0;
 
-//Variables de prueba
-
 int Enviando = 0;
+
+// Función Principal
 
 void main(void) {
     
@@ -403,41 +407,41 @@ void main(void) {
    
     __builtin_enable_interrupts();      // Se habilitan las interrupciones
     
-    InicializarESP();
+    InicializarESP();			// Se inicializa el módulo wifi ESP-8266
     
-    while(1)
+    while(1)				// Ciclo principal
     {
-        if(Revision == 2){
+        if(Revision == 2){		// Ejecuta la instrucción que recibe el PIC
             switch (smsR[0]){
-                case 's':
+                case 's':		// Si el comando recibido es "s", llama a la función para cambiar sentido de llantas.
                     SentidoLlantas();
                     break;
-                case 'v':
+                case 'v':		// Si el comando recibido es "v", llama a la función para cambiar velocidad de llantas.
                     Velocidad();
                     break;
-                case 'd':
+                case 'd':		// Si el comando recibido es "d", llama a la función para enviar el sentido actual de las llantas.
                     EnviarSentidos();
                     break;
-                case 'p':
+                case 'p':		// Si el comando recibido es "p", llama a la función para enviar los pasos recorridos por las llantas.
                     EnviarPasos();
                     break;
-                case 't':
+                case 't':		// Si el comando recibido es "t", llama a la función para enviar los tiempos de cada "tick" dado por cada llanta.
                     EnviarTiempos();
                     break;
-                case 'r':
+                case 'r':		// Si el comando recibido es "r", llama a la función para ejecutar el barrido de detección de objetos
                     Radar();
                     break;
-                case 'c':
+                case 'c':		// Si el comando recibido es "c", llama a la función para enviar nombre del robot
                     EnviarDatos('c');
                     break;
-                default:
+                default:		// Si el comando recibido está fuera de los listados, llama a la función para enviar "OK"
                     EnviarDatos('e');
                     break;
             }
             Revision = 0;
         }
         
-        switch(Rutina){
+        switch(Rutina){			// Este Switch sirve para el parpadeo de los LEDS
             case 1:
                 switch(blink){
                     case 1:
@@ -521,6 +525,7 @@ void main(void) {
     return;
 }
 
+//Función para enviar datos como "Error", "OK" y Nombre del robot
 void EnviarDatos(char p){
     
     switch(p){
@@ -633,16 +638,15 @@ void __ISR (34, IPL7SOFT) IntCN(void)
         }
     }
     
-	IFS1bits.CNAIF = 0b0;                   // Resetear bandera de interrupción
+    IFS1bits.CNAIF = 0b0;                   // Resetear bandera de interrupción
     IFS1bits.CNBIF = 0b0;                   // Resetear bandera de interrupción
 }
 
 // Interrupción del Timer 4 se activa cada 50ms
 void __ISR (16, IPL7SOFT) IntTimer4(void)
 {
-    
     Mandar = 1;
-	IFS0bits.T4IF = 0;                  // Resetear bandera de interrupción
+    IFS0bits.T4IF = 0;                  // Resetear bandera de interrupción
 }
 
 // Interrupción del Timer 5 se activa cada 25us
@@ -651,19 +655,21 @@ void __ISR (20, IPL7SOFT) IntTimer5(void)
     ContarSonico1++;
     ContarSonico2++;
     
-	IFS0bits.T5IF = 0;                  // Resetear bandera de interrupción
+    IFS0bits.T5IF = 0;                  // Resetear bandera de interrupción
 }
 
+
+//Función que activa la detección de objetos alrededor del robot y manda la info vía wifi
 void Radar(void){
     
-    EnviarCadena("AT+CIPSEND=0,1168\r\n",19);
+    EnviarCadena("AT+CIPSEND=0,1168\r\n",19);	//Indica al ESP-8266 que se enviarán 1168 bytes vía wifi
     Enviando = 1;
-    while(Enviando == 1){
+    while(Enviando == 1){			//Espera hasta que se envía la info al ESP-8266
     }
     
-    OC2RS = 4000;
+    OC2RS = 4000;			// Coloca el servomotor en su pocisión inicial
     
-    __builtin_disable_interrupts();
+    __builtin_disable_interrupts();	// Se desactivan interrupciones
     
     IEC0bits.T4IE = 0b1;                // Timer 4 Interrupt Enabled
     IEC0bits.T5IE = 0b1;                // Timer 5 Interrupt Enabled
@@ -677,27 +683,28 @@ void Radar(void){
     IFS0bits.T5IF = 0b0;                // Interruption Flag of Timer 5 to 0
     IFS1bits.CNAIF = 0b0;               // Interruption Flag of PORTA to 0
     
-    __builtin_enable_interrupts();
+    __builtin_enable_interrupts();	// Se activan interrupciones
     
     Grados = 0;
     
     blink = 0;
     
-    while(Grados < 146){
-        if(Mandar == 1){
-            Mandar = 0;                 
+    while(Grados < 146){	//Realiza 146 lecturas en cada ultrasónico
+        if(Mandar == 1){	//Si ya se realizó una lectura, ingresa a este condicional
+            Mandar = 0;         
             
-            dmil = TiempoSonico1;
-            mil = dmil/1000;
-            dmil -= mil*1000;
-            cen = dmil/100;
+            dmil = TiempoSonico1;	//Se carga y "codifica" la lectura del ultrasónico 1
+            mil = dmil/1000;		// mil guarda en miles la cantidad de 25uS que se detectaron en la señal PWM recibida.
+            dmil -= mil*1000;		
+            cen = dmil/100;		// cen guarda en centenas la cantidad de 25uS que se detectaron en la señal PWM recibida.
             dmil -= cen*100;
-            dec = dmil/10;
+            dec = dmil/10;		// dec guarda en decenas la cantidad de 25uS que se detectaron en la señal PWM recibida.
             dmil -= dec*10;
-            uni = dmil;
+            uni = dmil;			// uni guarda en unidades la cantidad de 25uS que se detectaron en la señal PWM recibida.
             
-            dmil = TiempoSonico2;
+            dmil = TiempoSonico2;	//Se carga la lectura del ultrasónico 2
             
+	    //Envía al ESP-8266 los 4 dígitos calculados en ASCII de la lectura del ultrasónico 1
             U1TXREG = mil+48;
             while (!U1STAbits.TRMT);                //espera a que termine la transimision
             U1TXREG = cen+48;
@@ -707,7 +714,7 @@ void Radar(void){
             U1TXREG = uni+48;
             while (!U1STAbits.TRMT);                //espera a que termine la transimision
             
-            mil = dmil/1000;
+            mil = dmil/1000;			//"codifica" la lectura del ultrasónico 2
             dmil -= mil*1000;
             cen = dmil/100;
             dmil -= cen*100;
@@ -715,6 +722,7 @@ void Radar(void){
             dmil -= dec*10;
             uni = dmil;
             
+	    //Envía al ESP-8266 los 4 dígitos calculados en ASCII de la lectura del ultrasónico 2
             U1TXREG = mil+48;
             while (!U1STAbits.TRMT);                //espera a que termine la transimision
             U1TXREG = cen+48;
@@ -724,10 +732,10 @@ void Radar(void){
             U1TXREG = uni+48;
             while (!U1STAbits.TRMT);                //espera a que termine la transimision
             
-            Grados++;
+            Grados++;		//Variable que almacena el grado o ángulo en el que se está realizando la lectura
         }
         
-        switch(blink){
+        switch(blink){		//Condicional para el blink de los LED's
             case 1:
                 LATACLR = LED1;
                 LATBCLR = LED2;
@@ -761,9 +769,9 @@ void Radar(void){
     TiempoSonico1 = 0;
     TiempoSonico2 = 0;
     
-    OC2RS = 4000;
+    OC2RS = 4000;		//Al finalizar regresa el servomotor a su posición inicial
     
-    __builtin_disable_interrupts();
+    __builtin_disable_interrupts();	// Desactiva las interrupciones
     
     IEC0bits.T4IE = 0b0;                // Timer 4 Interrupt Disabled
     IEC0bits.T5IE = 0b0;                // Timer 5 Interrupt Disabled
@@ -777,7 +785,7 @@ void Radar(void){
     IFS0bits.T5IF = 0b0;                // Interruption Flag of Timer 5 to 0
     IFS1bits.CNAIF = 0b0;               // Interruption Flag of PORTA to 0
     
-    __builtin_enable_interrupts();
+    __builtin_enable_interrupts();	// Habilita las interrupciones
     
 }
 
@@ -802,12 +810,12 @@ void __ISR (4, IPL7SOFT) IntTimer1(void)
 	IFS0bits.T1IF = 0;                  // Resetear bandera de interrupción
 }
 
-// Interrupción del UART Transmisión y Recepción
+// Interrupción de recepción del UART
 void __ISR (32, IPL7SOFT) IntUart1(void)
 {
-    charIn = U1RXREG;
+    charIn = U1RXREG;				//Lee el byte recibido
     
-    if(Enviando == 1 && charIn == '>'){
+    if(Enviando == 1 && charIn == '>'){		//Se cumple cuando se está configurando al ESP y se recibe el caracter '>'
         Enviando = 0;
     }
     
@@ -836,7 +844,7 @@ void __ISR (32, IPL7SOFT) IntUart1(void)
 void EnviarCaracter(char c) {
     __builtin_disable_interrupts();
     U1TXREG = c;
-    while (!U1STAbits.TRMT);                //espera a que termine la transimision
+    while (!U1STAbits.TRMT);                //espera a que termine la transmision
     __builtin_enable_interrupts();
 }
 
